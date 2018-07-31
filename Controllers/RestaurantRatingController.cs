@@ -7,6 +7,7 @@ using okta_dotnetcore_react_example.Data;
 
 namespace dotnet_angular_crud_example.Controllers
 {
+  [Authorize]
   [Route("/api/[controller]")]
   public class RestaurantRatingController : Controller
   {
@@ -23,6 +24,21 @@ namespace dotnet_angular_crud_example.Controllers
       var userId = this.GetUserId();
       var ratings = await context.RestaurantRatings.Where(rr => rr.UserID == userId).ToListAsync();
       return Ok(ratings);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult> GetByIdAsync(int id)
+    {
+      var userId = this.GetUserId();
+      var rating = await context.RestaurantRatings.SingleOrDefaultAsync<RestaurantRating>(rr => rr.ID == id);
+      if (rating.UserID != userId)
+      {
+        return Unauthorized();
+      }
+      else
+      {
+        return Ok(rating);
+      }
     }
 
     [HttpPost]
@@ -43,14 +59,17 @@ namespace dotnet_angular_crud_example.Controllers
         savedRating.RestaurantName = rating.RestaurantName;
         savedRating.RestaurantType = rating.RestaurantType;
         savedRating.Rating = rating.Rating;
+        await context.SaveChangesAsync();
+        return Ok(rating);
       }
       else
       {
         rating.UserID = userId;
         await context.AddAsync<RestaurantRating>(rating);
+        await context.SaveChangesAsync();
+        return CreatedAtAction("GetByIdAsync", rating);
       }
-      await context.SaveChangesAsync();
-      return Ok(rating);
+
     }
 
     [HttpDelete("{id}")]
